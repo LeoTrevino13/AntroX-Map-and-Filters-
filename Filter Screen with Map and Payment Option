@@ -1,0 +1,178 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, Button, Picker, TextInput, StyleSheet, ScrollView, Alert } from 'react-native';
+import { Card, Title, Paragraph } from 'react-native-paper';
+import MapView, { Marker } from 'react-native-maps';
+import axios from 'axios';
+
+const AustinNightclubsPaymentScreen = () => {
+    // Filtors necesarios para la app
+    const [nightclubs, setNightclubs] = useState([]);
+    const [filteredNightclubs, setFilteredNightclubs] = useState([]);
+    const [priceFilter, setPriceFilter] = useState(0);
+    const [ratingFilter, setRatingFilter] = useState(0);
+    const [vipTableFilter, setVipTableFilter] = useState(false);
+    const [selectedNightclub, setSelectedNightclub] = useState(null);
+    const [ticketQuantity, setTicketQuantity] = useState(1);
+    const [paymentAmount, setPaymentAmount] = useState(0);
+
+  
+    const fetchNightclubs = async () => {
+        try {
+            const response = await axios.get('https://example.com/nightclubs'); // Replace with your real API
+            setNightclubs(response.data);
+            setFilteredNightclubs(response.data); // Initially set all nightclubs
+        } catch (error) {
+            console.error("Error fetching nightclubs:", error);
+        }
+    };
+
+    // Apply filters to the nightclubs data
+    const applyFilters = () => {
+        let filtered = nightclubs;
+
+        if (priceFilter > 0) {
+            filtered = filtered.filter(nightclub => nightclub.price <= priceFilter);
+        }
+        if (ratingFilter > 0) {
+            filtered = filtered.filter(nightclub => nightclub.rating >= ratingFilter);
+        }
+        if (vipTableFilter) {
+            filtered = filtered.filter(nightclub => nightclub.vipTablesAvailable);
+        }
+
+        setFilteredNightclubs(filtered);
+    };
+
+    const selectNightclub = (nightclub) => {
+        setSelectedNightclub(nightclub);
+        setPaymentAmount(nightclub.price * ticketQuantity); // Calculate the total payment based on the selected quantity
+    };
+
+ 
+    const handlePayment = () => {
+        if (!selectedNightclub) {
+            Alert.alert("Please select a nightclub and ticket quantity first.");
+            return;
+        }
+
+      
+        Alert.alert("Payment successful!", `You paid $${paymentAmount} for tickets at ${selectedNightclub.name}`);
+    };
+
+    // Fetch nightclubs when component mounts
+    useEffect(() => {
+        fetchNightclubs();
+    }, []);
+
+    // Muestra el UI
+    return (
+        <View style={styles.container}>
+            {/* Map Section */}
+            <MapView
+                style={styles.map}
+                initialRegion={{
+                    latitude: 30.2672,
+                    longitude: -97.7431,
+                    latitudeDelta: 0.0922,
+                    longitudeDelta: 0.0421,
+                }}
+            >
+                {filteredNightclubs.map((nightclub, index) => (
+                    <Marker
+                        key={index}
+                        coordinate={{ latitude: nightclub.latitude, longitude: nightclub.longitude }}
+                        title={nightclub.name}
+                        description={`Price: $${nightclub.price}, Rating: ${nightclub.rating}`}
+                        onPress={() => selectNightclub(nightclub)}
+                    />
+                ))}
+            </MapView>
+
+            {/* Filters Section */}
+            <View style={styles.filterContainer}>
+                <Text>Filter Nightclubs</Text>
+                <Text>Price Range</Text>
+                <Picker
+                    selectedValue={priceFilter}
+                    onValueChange={(itemValue) => setPriceFilter(itemValue)}
+                >
+                    <Picker.Item label="Any Price" value={0} />
+                    <Picker.Item label="Below $50" value={50} />
+                    <Picker.Item label="Below $100" value={100} />
+                    <Picker.Item label="Below $200" value={200} />
+                </Picker>
+
+                <Text>Rating</Text>
+                <Picker
+                    selectedValue={ratingFilter}
+                    onValueChange={(itemValue) => setRatingFilter(itemValue)}
+                >
+                    <Picker.Item label="Any Rating" value={0} />
+                    <Picker.Item label="Above 3" value={3} />
+                    <Picker.Item label="Above 4" value={4} />
+                    <Picker.Item label="Above 5" value={5} />
+                </Picker>
+
+                <Text>VIP Table Availability</Text>
+                <Picker
+                    selectedValue={vipTableFilter}
+                    onValueChange={(itemValue) => setVipTableFilter(itemValue)}
+                >
+                    <Picker.Item label="Any" value={false} />
+                    <Picker.Item label="Only VIP Available" value={true} />
+                </Picker>
+
+                <Button title="Apply Filters" onPress={applyFilters} />
+            </View>
+
+            {/* Selected Nightclub & Ticket Details */}
+            {selectedNightclub && (
+                <Card style={styles.card}>
+                    <Title>{selectedNightclub.name}</Title>
+                    <Paragraph>{selectedNightclub.description}</Paragraph>
+                    <Paragraph>Price per Ticket: ${selectedNightclub.price}</Paragraph>
+                    <Text>Tickets: </Text>
+                    <TextInput
+                        style={styles.input}
+                        value={ticketQuantity.toString()}
+                        onChangeText={(text) => setTicketQuantity(parseInt(text))}
+                        keyboardType="numeric"
+                    />
+                    <Paragraph>Total: ${paymentAmount}</Paragraph>
+                    <Button title="Proceed to Payment" onPress={handlePayment} />
+                </Card>
+            )}
+        </View>
+    );
+};
+
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+    map: {
+        height: '60%',
+        width: '100%',
+    },
+    filterContainer: {
+        padding: 20,
+        backgroundColor: 'white',
+        borderTopWidth: 1,
+        borderTopColor: '#ddd',
+    },
+    card: {
+        padding: 20,
+        marginTop: 20,
+        marginBottom: 20,
+    },
+    input: {
+        height: 40,
+        borderColor: '#ccc',
+        borderWidth: 1,
+        marginVertical: 10,
+        paddingHorizontal: 10,
+    },
+});
+
+export default AustinNightclubsPaymentScreen;
